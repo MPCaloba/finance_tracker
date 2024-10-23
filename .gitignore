@@ -37,3 +37,6 @@ venv.bak/
 !.vscode/launch.json 
 !.vscode/extensions.json 
 .history
+
+# Other
+.DS_Store
