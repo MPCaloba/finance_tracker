@@ -34,11 +34,11 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'django_filters',
+    'django_htmx',
     
     # project apps
     "tracker",
-    
-    
 ]
 
 SITE_ID = 1
@@ -52,6 +52,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_htmx.middleware.HtmxMiddleware",
 ]
 
 ROOT_URLCONF = "finance_project.urls"
@@ -138,3 +139,5 @@ INTERNAL_IPS = [
 
 AUTH_USER_MODEL = 'tracker.User'
 LOGIN_REDIRECT_URL = 'index'
+
+PAGE_SIZE = 10
