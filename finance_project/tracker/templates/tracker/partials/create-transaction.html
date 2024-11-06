@@ -1,0 +1,36 @@
+{% load widget_tweaks %}
+
+<h1 class="mt-8 mb-4 prose prose-2xl text-white">
+    Create Transaction
+</h1>
+
+<form hx-post="{% url 'create-transaction' %}">
+    <div class="mb-2 form-control text-black">
+        {{ form.type|add_label_class:"label text-white" }}
+        {% render_field form.type class="input text-black" %}
+    </div>
+
+    <div class="mb-2 form-control">
+        {{ form.date|add_label_class:"label text-white" }}
+        {% render_field form.date class="input text-black" %}
+    </div>
+
+    <div class="mb-2 form-control">
+        {{ form.amount|add_label_class:"label text-white" }}
+        {% render_field form.amount class="input text-black" %}
+    </div>
+
+    <div class="mb-2 form-control">
+        {{ form.expense_category|add_label_class:"label text-white" }}
+        {% render_field form.expense_category class="input text-black" %}
+    </div>
+
+    <div class="mb-12 form-control">
+        {{ form.income_category|add_label_class:"label text-white" }}
+        {% render_field form.income_category class="input text-black" %}
+    </div>
+
+    <button class="btn btn-success">
+        Add
+    </button>
+</form>
