@@ -29,10 +29,10 @@ class Account(models.Model):
         A method to calculate the balance based on related transactions.
         This will sum up incoming transactions and subtract outgoing ones.
         """
-        incoming = Decimal(self.transactions_to.filter(transaction_type='income').aggregate(total=models.Sum('amount'))['total'] or 0)
-        outgoing = Decimal(self.transactions_from.filter(transaction_type='expense').aggregate(total=models.Sum('amount'))['total'] or 0)
-        internal_in = Decimal(self.transactions_to.filter(transaction_type='internal').aggregate(total=models.Sum('amount'))['total'] or 0)
-        internal_out = Decimal(self.transactions_from.filter(transaction_type='internal').aggregate(total=models.Sum('amount'))['total'] or 0)
+        incoming = Decimal(self.transactions_to.filter(type='income').aggregate(total=models.Sum('amount'))['total'] or 0)
+        outgoing = Decimal(self.transactions_from.filter(type='expense').aggregate(total=models.Sum('amount'))['total'] or 0)
+        internal_in = Decimal(self.transactions_to.filter(type='internal').aggregate(total=models.Sum('amount'))['total'] or 0)
+        internal_out = Decimal(self.transactions_from.filter(type='internal').aggregate(total=models.Sum('amount'))['total'] or 0)
 
         self.balance = incoming - outgoing + internal_in - internal_out
         self.save()
@@ -47,7 +47,7 @@ class Transaction(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     description = models.TextField()
-    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
+    type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateTimeField(default=timezone.now)
     
@@ -60,7 +60,7 @@ class Transaction(models.Model):
     objects = TransactionQuerySet.as_manager()
 
     def __str__(self):
-        return f'{self.transaction_type.capitalize()} - {self.amount} on {self.date}'
+        return f'{self.type.capitalize()} - {self.amount} on {self.date}'
 
     def save(self, *args, **kwargs):
         """
@@ -75,7 +75,7 @@ class Transaction(models.Model):
         For incoming transactions, apply tax and fee handling.
         """
         # Tax handling for incoming transactions
-        if self.transaction_type == 'income':
+        if self.type == 'income':
             tax_amount = (self.tax_percentage or Decimal(0)) * self.amount / Decimal(100)
 
             self.destination_account.balance += self.amount
@@ -85,11 +85,11 @@ class Transaction(models.Model):
             virtual_tax_account.balance += tax_amount
             virtual_tax_account.save()
 
-        elif self.transaction_type == 'internal':
+        elif self.type == 'internal':
             self.origin_account.calculate_balance()
             self.destination_account.calculate_balance()
 
-        elif self.transaction_type == 'expense':
+        elif self.type == 'expense':
             self.origin_account.calculate_balance()
 
         # Fee handling
@@ -101,7 +101,7 @@ class Transaction(models.Model):
         Creates a separate expense transaction to record the fee as an expense.
         """
         fee_transaction = Transaction.objects.create(
-            transaction_type='expense',
+            type='expense',
             amount=self.fee,
             origin_account=self.origin_account,
             description=f"Fee for transaction {self.id}: {self.description}",

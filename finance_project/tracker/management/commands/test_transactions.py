@@ -26,7 +26,7 @@ class Command(BaseCommand):
             date = timezone.make_aware(fake.date_time_between(start_date="-1y", end_date="now"))
 
             Transaction.objects.create(
-                transaction_type='income',
+                type='income',
                 amount=amount,
                 date=date,
                 origin_account=None,
@@ -48,7 +48,7 @@ class Command(BaseCommand):
             date = timezone.make_aware(fake.date_time_between(start_date="-1y", end_date="now"))
 
             Transaction.objects.create(
-                transaction_type='expense',
+                type='expense',
                 amount=amount,
                 date=date,
                 origin_account=account,
