@@ -1,9 +1,11 @@
-from django.views.generic import ListView
+from django.views.generic import ListView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
 from django.shortcuts import render
 
 from tracker.models import Transaction
 from tracker.filters import TransactionFilter
+from tracker.forms import TransactionForm
 
 
 def index(request):
@@ -39,3 +41,23 @@ class TransactionsListView(LoginRequiredMixin, ListView):
             return render(request, 'tracker/partials/transactions-container.html', context)
 
         return render(request, 'tracker/transactions-list.html', context)
+
+
+class TransactionsCreateView(LoginRequiredMixin, CreateView):
+    model = Transaction
+    form_class = TransactionForm
+    template_name = 'tracker/partials/create-transaction.html'
+    success_url = '/transactions/success/'
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        response = super().form_valid(form)
+
+        if self.request.htmx:
+            return render(
+                self.request,
+                'tracker/partials/transaction-success.html',
+                {'message': 'Transaction successfully added!'},
+                )
+
+        return response
