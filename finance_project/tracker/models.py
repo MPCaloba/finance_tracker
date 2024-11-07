@@ -93,7 +93,7 @@ class Transaction(models.Model):
             self.origin_account.calculate_balance()
 
         # Fee handling
-        if self.fee > 0:
+        if self.fee is not None and self.fee > 0:
             self.create_fee_transaction()
 
     def create_fee_transaction(self):
