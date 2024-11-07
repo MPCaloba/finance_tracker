@@ -1,0 +1,77 @@
+{% load widget_tweaks %}
+
+<!-- TYPE -->
+<div class="mb-2 form-control text-black">
+    {{ form.type|add_label_class:"label text-white" }}
+    {% render_field form.type class="input text-black" %}
+</div>
+
+<!-- DATE -->
+<div class="mb-2 form-control">
+    {{ form.date|add_label_class:"label text-white" }}
+    {% render_field form.date class="input text-black" %}
+</div>
+
+<!-- DESCRIPTION -->
+<div class="mb-2 form-control">
+    {{ form.description|add_label_class:"label text-white" }}
+    {% render_field form.description class="input text-black" %}
+</div>
+
+<!-- AMOUNT -->
+<div class="mb-2 form-control">
+    {{ form.amount|add_label_class:"label text-white" }}
+    {% render_field form.amount class="input text-black" %}
+
+    {% for error in form.amount.errors %}
+        <p class="text-red-400 mt-1"> {{ error }}</p>
+    {% endfor %}
+</div>
+
+<!-- EXPENSE CATEGORY -->
+<div class="mb-2 form-control">
+    {{ form.expense_category|add_label_class:"label text-white" }}
+    {% render_field form.expense_category class="input text-black" %}
+</div>
+
+<!-- INCOME CATEGORY -->
+<div class="mb-2 form-control">
+    {{ form.income_category|add_label_class:"label text-white" }}
+    {% render_field form.income_category class="input text-black" %}
+</div>
+
+<!-- ORIGIN ACCOUNT -->
+<div class="mb-2 form-control">
+    {{ form.origin_account|add_label_class:"label text-white" }}
+    {% render_field form.origin_account class="input text-black" %}
+</div>
+
+<!-- DESTINATION ACCOUNT -->
+<div class="mb-2 form-control">
+    {{ form.destination_account|add_label_class:"label text-white" }}
+    {% render_field form.destination_account class="input text-black" %}
+</div>
+
+<!-- EXPENSE SOURCE -->
+<div class="mb-2 form-control">
+    {{ form.expense_source|add_label_class:"label text-white" }}
+    {% render_field form.expense_source class="input text-black" %}
+</div>
+
+<!-- EXPENSE TYPE -->
+<div class="mb-2 form-control">
+    {{ form.expense_type|add_label_class:"label text-white" }}
+    {% render_field form.expense_type class="input text-black" %}
+</div>
+
+<!-- TAX PERCENTAGE -->
+<div class="mb-2 form-control">
+    {{ form.tax_percentage|add_label_class:"label text-white" }}
+    {% render_field form.tax_percentage class="input text-black" %}
+</div>
+
+<!-- FEE -->
+<div class="mb-12 form-control">
+    {{ form.fee|add_label_class:"label text-white" }}
+    {% render_field form.fee class="input text-black" %}
+</div>
