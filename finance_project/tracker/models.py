@@ -69,6 +69,9 @@ class Transaction(models.Model):
         super().save(*args, **kwargs)
         self.adjust_account_balances()
 
+        if self.fee is not None and self.fee > 0:
+            self.create_fee_transaction()
+
     def adjust_account_balances(self):
         """
         Adjusts the balances of the involved accounts based on the transaction type.
@@ -92,10 +95,6 @@ class Transaction(models.Model):
         elif self.type == 'expense':
             self.origin_account.calculate_balance()
 
-        # Fee handling
-        if self.fee > 0:
-            self.create_fee_transaction()
-
     def create_fee_transaction(self):
         """
         Creates a separate expense transaction to record the fee as an expense.
@@ -103,17 +102,20 @@ class Transaction(models.Model):
         fee_transaction = Transaction.objects.create(
             type='expense',
             amount=self.fee,
-            origin_account=self.origin_account,
-            description=f"Fee for transaction {self.id}: {self.description}",
-            date=self.date
+            origin_account=self.destination_account,
+            description=f"Fee for the '{self.description}' transaction.",
+            date=self.date,
+            user=self.user,
         )
 
         Expense.objects.create(
-        category='fees',
-        amount=self.fee,
-        account=self.origin_account,
-        transaction=fee_transaction,
-        date=self.date,
+            category='fees',
+            amount=self.fee,
+            account=self.destination_account,
+            transaction=fee_transaction,
+            date=self.date,
+            source='personal',
+            fixed_or_variable='fixed',
         )
 
         fee_transaction.save()
