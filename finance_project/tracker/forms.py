@@ -50,6 +50,9 @@ class TransactionForm(forms.ModelForm):
     def save(self, commit=True):
         transaction = super().save(commit=False)
 
+        if commit:
+            transaction.save()
+
         if transaction.type == 'expense':
             expense = Expense(
                 amount=transaction.amount,
@@ -61,7 +64,6 @@ class TransactionForm(forms.ModelForm):
                 transaction=transaction
             )
             if commit:
-                transaction.save()
                 expense.save()
 
         elif transaction.type == 'income':
@@ -73,9 +75,6 @@ class TransactionForm(forms.ModelForm):
                 transaction=transaction
             )
             if commit:
-                transaction.save()
                 income.save()
 
-        if commit:
-            transaction.save()
         return transaction
