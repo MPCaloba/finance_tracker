@@ -61,3 +61,13 @@ class TransactionsCreateView(LoginRequiredMixin, CreateView):
                 )
 
         return response
+
+    def form_invalid(self, form):
+        if self.request.htmx:
+            return render(
+                self.request,
+                'tracker/partials/create-transaction.html',
+                {'form': form},
+            )
+
+        return super().form_invalid(form)

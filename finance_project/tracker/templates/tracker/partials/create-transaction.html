@@ -28,6 +28,10 @@
     <div class="mb-2 form-control">
         {{ form.amount|add_label_class:"label text-white" }}
         {% render_field form.amount class="input text-black" %}
+
+        {% for error in form.amount.errors %}
+            <p class="text-red-400 mt-1"> {{ error }}</p>
+        {% endfor %}
     </div>
 
     <!-- EXPENSE CATEGORY -->
@@ -78,7 +82,16 @@
         {% render_field form.fee class="input text-black" %}
     </div>
 
+    <!-- ADD BUTTON -->
     <button class="btn btn-success">
         Add
+    </button>
+
+    <!-- CANCEL BUTTON -->
+    <button class="btn btn-error" 
+        hx-get="{% url 'transactions-list' %}" 
+        hx-target="#transaction-block"
+        hx-push-url='/transactions'>
+        Cancel
     </button>
 </form>

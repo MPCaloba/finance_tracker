@@ -31,6 +31,12 @@ class TransactionForm(forms.ModelForm):
         required=False
     )
 
+    def clean_amount(self):
+        amount = self.cleaned_data['amount']
+        if amount <= 0:
+            raise forms.ValidationError("Amount must be a positive number")
+        return amount
+
     class Meta:
         model = Transaction
         fields = (
@@ -46,7 +52,7 @@ class TransactionForm(forms.ModelForm):
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'})
         }
-    
+
     def save(self, commit=True):
         transaction = super().save(commit=False)
 
