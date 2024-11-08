@@ -6,8 +6,8 @@ from django.http import HttpResponseNotAllowed
 from tracker.models import Account, Transaction, Income, Expense
 from tracker.filters import TransactionFilter
 from tracker.forms import TransactionForm
+from tracker.tracker_helpers import adjust_account_balances
 
-from decimal import Decimal
 
 def index(request):
     return render(request, 'tracker/index.html')
@@ -54,11 +54,11 @@ class TransactionsCreateView(LoginRequiredMixin, CreateView):
         # Set the user before saving the transaction
         form.instance.user = self.request.user
 
-        # Adjust account balances based on the newly created transaction
-        # adjust_account_balances(form.instance)
-
         # Save the transaction
         response = super().form_valid(form)
+
+        # Adjust account balances based on the newly created transaction
+        adjust_account_balances(form.instance)
 
         # Handle HTMX requests
         if self.request.htmx:
@@ -128,22 +128,12 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
         original_amount = original_transaction.amount
         original_origin_account = original_transaction.origin_account
         original_destination_account = original_transaction.destination_account
-        original_tax_percentage = original_transaction.tax_percentage
 
         # Adjust balances based on the original values
         if transaction.type == 'income':
             # Deduct the original amount from the original destination account
             original_destination_account.balance -= original_amount
             original_destination_account.save()
-
-            # If there was a tax percentage, deduct the original amount and update to the new tax percentage
-            if original_tax_percentage:
-                tax_account = Account.objects.get(account_type='virtual_tax')
-                original_tax_amount = (original_tax_percentage * original_amount) / Decimal(100)
-                new_tax_amount = (transaction.tax_percentage * transaction.amount) / Decimal(100)
-
-                tax_account.balance += new_tax_amount - original_tax_amount
-                tax_account.save()
 
             # Update the transaction and the Income record
             income, created = Income.objects.update_or_create(
@@ -155,25 +145,6 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
                     'account': transaction.destination_account,
                 }
             )
-
-            '''
-            # Recalculate the tax amount if a tax percentage exists
-            if original_transaction.tax_percentage:
-                original_tax_amount = original_transaction.amount * (original_transaction.tax_percentage / 100)
-                tax_account = Account.objects.get(account_type='virtual_tax')
-
-                tax_account.balance -= original_tax_amount
-                tax_account.save()
-
-            if transaction.tax_percentage:
-                new_tax_amount = transaction.amount * (transaction.tax_percentage / 100)
-
-                tax_account.balance += new_tax_amount
-                tax_account.save()
-
-            # transaction.destination_account.balance += transaction.amount
-            # transaction.destination_account.save()
-            '''
 
         elif transaction.type == 'expense':
             original_origin_account.balance += original_amount
@@ -191,7 +162,11 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
                 }
             )
 
+        # Save the updated transaction
         transaction.save()
+
+        # Adjust account balances after the update
+        adjust_account_balances(transaction)
 
         if self.request.htmx:
             return render(
@@ -213,11 +188,16 @@ class TransactionsDeleteView(LoginRequiredMixin, DeleteView):
         
         if self.object.user != request.user:
             return HttpResponseNotAllowed(['DELETE'])
-        
+
+        # Store the transaction details to display a message
         amount = self.object.amount
         date = self.object.date
-        
+
+        # Perform the deletion
         self.object.delete()
+
+        # Adjust the account balances after deleting the transaction
+        adjust_account_balances(self.object)
 
         context = {
             'message': f"Transaction of {amount} on {date} was deleted successfully!"

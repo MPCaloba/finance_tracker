@@ -1,5 +1,7 @@
 from django import forms
+
 from tracker.models import Transaction, Expense, Income
+from tracker.tracker_helpers import adjust_account_balances
 
 
 class TransactionForm(forms.ModelForm):
@@ -46,7 +48,6 @@ class TransactionForm(forms.ModelForm):
             'amount',
             'origin_account',
             'destination_account',
-            'tax_percentage',
         )
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'})
@@ -61,12 +62,12 @@ class TransactionForm(forms.ModelForm):
         if transaction.type == 'expense':
             expense = Expense(
                 amount=transaction.amount,
-                date=transaction.date,
                 category=self.cleaned_data['expense_category'],
+                date=transaction.date,
                 source=self.cleaned_data['expense_source'],
                 fixed_or_variable=self.cleaned_data['expense_type'],
+                transaction=transaction,
                 account=transaction.origin_account,
-                transaction=transaction
             )
             if commit:
                 expense.save()
@@ -74,12 +75,15 @@ class TransactionForm(forms.ModelForm):
         elif transaction.type == 'income':
             income = Income(
                 amount=transaction.amount,
-                date=transaction.date,
                 category=self.cleaned_data['income_category'],
+                date=transaction.date,
+                transaction=transaction,
                 account=transaction.destination_account,
-                transaction=transaction
             )
             if commit:
                 income.save()
+
+        # Adjust the account balance after saving the transaction
+        adjust_account_balances(transaction)
 
         return transaction

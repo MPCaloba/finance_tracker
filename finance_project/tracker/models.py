@@ -28,6 +28,7 @@ class Transaction(models.Model):
         ('income', 'Income'),
         ('expense', 'Expense'),
         ('internal', 'Internal'),
+        ('tax', 'Tax'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -38,8 +39,6 @@ class Transaction(models.Model):
     
     origin_account = models.ForeignKey(Account, related_name='transactions_from', on_delete=models.CASCADE, blank=True, null=True)
     destination_account = models.ForeignKey(Account, related_name='transactions_to', on_delete=models.CASCADE, blank=True, null=True)
-    
-    tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
 
     objects = TransactionQuerySet.as_manager()
 
@@ -56,7 +55,7 @@ class Income(models.Model):
         ('interest', 'Interest'),
         ('parents', 'Parents'),
         ('birthday', 'Birthday'),
-        ('iva_reimbursement', 'IVA_Reimbursement'),
+        ('iva_reimbursement', 'IVA Reimbursement'),
     ]
 
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -81,6 +80,7 @@ class Expense(models.Model):
         ('coffees & snacks', 'Coffees & Snacks'),
         ('dining out', 'Dining Out'),
         ('entertainment', 'Entertainment'),
+        ('fees', 'Fees'),
         ('gifts', 'Gifts'),
         ('groceries', 'Groceries'),
         ('gym', 'Gym'),
