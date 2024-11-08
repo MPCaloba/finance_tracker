@@ -47,7 +47,6 @@ class TransactionForm(forms.ModelForm):
             'origin_account',
             'destination_account',
             'tax_percentage',
-            'fee',
         )
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'})

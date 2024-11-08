@@ -7,6 +7,7 @@ from tracker.models import Account, Transaction, Income, Expense
 from tracker.filters import TransactionFilter
 from tracker.forms import TransactionForm
 
+from decimal import Decimal
 
 def index(request):
     return render(request, 'tracker/index.html')
@@ -50,9 +51,16 @@ class TransactionsCreateView(LoginRequiredMixin, CreateView):
     success_url = '/transactions/success/'
 
     def form_valid(self, form):
+        # Set the user before saving the transaction
         form.instance.user = self.request.user
+
+        # Adjust account balances based on the newly created transaction
+        # adjust_account_balances(form.instance)
+
+        # Save the transaction
         response = super().form_valid(form)
 
+        # Handle HTMX requests
         if self.request.htmx:
             return render(
                 self.request,
@@ -101,6 +109,7 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
                 initial.update({
                     'expense_category': expense.category,
                     'expense_type': expense.fixed_or_variable,
+                    'expense_source': expense.source,
                     'amount': expense.amount,
                     'date': expense.date,
                     'account': expense.account,
@@ -119,12 +128,24 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
         original_amount = original_transaction.amount
         original_origin_account = original_transaction.origin_account
         original_destination_account = original_transaction.destination_account
+        original_tax_percentage = original_transaction.tax_percentage
 
         # Adjust balances based on the original values
-        if transaction.type == 'income' and original_destination_account:
+        if transaction.type == 'income':
+            # Deduct the original amount from the original destination account
             original_destination_account.balance -= original_amount
             original_destination_account.save()
 
+            # If there was a tax percentage, deduct the original amount and update to the new tax percentage
+            if original_tax_percentage:
+                tax_account = Account.objects.get(account_type='virtual_tax')
+                original_tax_amount = (original_tax_percentage * original_amount) / Decimal(100)
+                new_tax_amount = (transaction.tax_percentage * transaction.amount) / Decimal(100)
+
+                tax_account.balance += new_tax_amount - original_tax_amount
+                tax_account.save()
+
+            # Update the transaction and the Income record
             income, created = Income.objects.update_or_create(
                 transaction=transaction,
                 defaults={
@@ -135,6 +156,7 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
                 }
             )
 
+            '''
             # Recalculate the tax amount if a tax percentage exists
             if original_transaction.tax_percentage:
                 original_tax_amount = original_transaction.amount * (original_transaction.tax_percentage / 100)
@@ -149,15 +171,11 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
                 tax_account.balance += new_tax_amount
                 tax_account.save()
 
-            transaction.destination_account.balance += transaction.amount
-            transaction.destination_account.save()
+            # transaction.destination_account.balance += transaction.amount
+            # transaction.destination_account.save()
+            '''
 
-            if original_transaction.fee:
-                fee_expense = Expense.objects.get(transaction=original_transaction)
-                fee_expense.amount = transaction.fee
-                fee_expense.save()
-
-        elif transaction.type == 'expense' and original_origin_account:
+        elif transaction.type == 'expense':
             original_origin_account.balance += original_amount
             original_origin_account.save()
 
@@ -168,12 +186,10 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
                     'date': transaction.date,
                     'category': form.cleaned_data.get('expense_category'),
                     'account': transaction.origin_account,
-                    'fixed_or_variable': form.cleaned_data.get('expense_type')
+                    'fixed_or_variable': form.cleaned_data.get('expense_type'),
+                    'source': form.cleaned_data.get('expense_source'),
                 }
             )
-
-            transaction.origin_account.balance -= transaction.amount
-            transaction.origin_account.save()
 
         transaction.save()
 

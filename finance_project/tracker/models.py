@@ -55,7 +55,6 @@ class Transaction(models.Model):
     destination_account = models.ForeignKey(Account, related_name='transactions_to', on_delete=models.CASCADE, blank=True, null=True)
     
     tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-    fee = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 
     objects = TransactionQuerySet.as_manager()
 
@@ -69,15 +68,10 @@ class Transaction(models.Model):
         super().save(*args, **kwargs)
         self.adjust_account_balances()
 
-        if self.fee is not None and self.fee > 0:
-            self.create_fee_transaction()
-
     def adjust_account_balances(self):
         """
         Adjusts the balances of the involved accounts based on the transaction type.
-        For incoming transactions, apply tax and fee handling.
         """
-        # Tax handling for incoming transactions
         if self.type == 'income':
             tax_amount = (self.tax_percentage or Decimal(0)) * self.amount / Decimal(100)
 
@@ -94,31 +88,6 @@ class Transaction(models.Model):
 
         elif self.type == 'expense':
             self.origin_account.calculate_balance()
-
-    def create_fee_transaction(self):
-        """
-        Creates a separate expense transaction to record the fee as an expense.
-        """
-        fee_transaction = Transaction.objects.create(
-            type='expense',
-            amount=self.fee,
-            origin_account=self.destination_account,
-            description=f"Fee for the '{self.description}' transaction.",
-            date=self.date,
-            user=self.user,
-        )
-
-        Expense.objects.create(
-            category='fees',
-            amount=self.fee,
-            account=self.destination_account,
-            transaction=fee_transaction,
-            date=self.date,
-            source='personal',
-            fixed_or_variable='fixed',
-        )
-
-        fee_transaction.save()
 
     class Meta:
         ordering = ['-date']
@@ -155,7 +124,6 @@ class Expense(models.Model):
         ('coffees & snacks', 'Coffees & Snacks'),
         ('dining out', 'Dining Out'),
         ('entertainment', 'Entertainment'),
-        ('fees', 'Fees'),
         ('gifts', 'Gifts'),
         ('groceries', 'Groceries'),
         ('gym', 'Gym'),
