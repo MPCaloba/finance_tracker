@@ -3,8 +3,6 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from .managers import TransactionQuerySet
 
-from decimal import Decimal
-
 
 class User(AbstractUser):
     pass
@@ -23,19 +21,6 @@ class Account(models.Model):
 
     def __str__(self):
         return self.name
-
-    def calculate_balance(self):
-        """
-        A method to calculate the balance based on related transactions.
-        This will sum up incoming transactions and subtract outgoing ones.
-        """
-        incoming = Decimal(self.transactions_to.filter(type='income').aggregate(total=models.Sum('amount'))['total'] or 0)
-        outgoing = Decimal(self.transactions_from.filter(type='expense').aggregate(total=models.Sum('amount'))['total'] or 0)
-        internal_in = Decimal(self.transactions_to.filter(type='internal').aggregate(total=models.Sum('amount'))['total'] or 0)
-        internal_out = Decimal(self.transactions_from.filter(type='internal').aggregate(total=models.Sum('amount'))['total'] or 0)
-
-        self.balance = incoming - outgoing + internal_in - internal_out
-        self.save()
 
 
 class Transaction(models.Model):
@@ -60,34 +45,6 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f'{self.type.capitalize()} - {self.amount} on {self.date}'
-
-    def save(self, *args, **kwargs):
-        """
-        Override the save method to handle balance adjustments automatically when a transaction is created.
-        """
-        super().save(*args, **kwargs)
-        self.adjust_account_balances()
-
-    def adjust_account_balances(self):
-        """
-        Adjusts the balances of the involved accounts based on the transaction type.
-        """
-        if self.type == 'income':
-            tax_amount = (self.tax_percentage or Decimal(0)) * self.amount / Decimal(100)
-
-            self.destination_account.balance += self.amount
-            self.destination_account.save()
-            
-            virtual_tax_account = Account.objects.get(account_type='virtual_tax')
-            virtual_tax_account.balance += tax_amount
-            virtual_tax_account.save()
-
-        elif self.type == 'internal':
-            self.origin_account.calculate_balance()
-            self.destination_account.calculate_balance()
-
-        elif self.type == 'expense':
-            self.origin_account.calculate_balance()
 
     class Meta:
         ordering = ['-date']
