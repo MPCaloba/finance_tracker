@@ -1,16 +1,15 @@
 {% load widget_tweaks %}
 
 <h1 class="mt-8 mb-4 prose prose-2xl text-white">
-    Create Transaction
+    Update Transaction
 </h1>
 
-<form hx-post="{% url 'create-transaction' %}" hx-target="#transaction-block">
-    {% csrf_token %}
+<form hx-post="{% url 'update-transaction' transaction.pk %}" hx-target="#transaction-block">
     {% include 'tracker/partials/transaction-form.html' %}
 
-    <!-- ADD BUTTON -->
+    <!-- UPDATE BUTTON -->
     <button class="btn btn-success">
-        Add
+        Update
     </button>
 
     <!-- CANCEL BUTTON -->

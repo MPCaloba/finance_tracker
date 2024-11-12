@@ -3,8 +3,6 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from .managers import TransactionQuerySet
 
-from decimal import Decimal
-
 
 class User(AbstractUser):
     pass
@@ -24,25 +22,13 @@ class Account(models.Model):
     def __str__(self):
         return self.name
 
-    def calculate_balance(self):
-        """
-        A method to calculate the balance based on related transactions.
-        This will sum up incoming transactions and subtract outgoing ones.
-        """
-        incoming = Decimal(self.transactions_to.filter(type='income').aggregate(total=models.Sum('amount'))['total'] or 0)
-        outgoing = Decimal(self.transactions_from.filter(type='expense').aggregate(total=models.Sum('amount'))['total'] or 0)
-        internal_in = Decimal(self.transactions_to.filter(type='internal').aggregate(total=models.Sum('amount'))['total'] or 0)
-        internal_out = Decimal(self.transactions_from.filter(type='internal').aggregate(total=models.Sum('amount'))['total'] or 0)
-
-        self.balance = incoming - outgoing + internal_in - internal_out
-        self.save()
-
 
 class Transaction(models.Model):
     TRANSACTION_TYPES = [
         ('income', 'Income'),
         ('expense', 'Expense'),
         ('internal', 'Internal'),
+        ('tax', 'Tax'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -53,72 +39,11 @@ class Transaction(models.Model):
     
     origin_account = models.ForeignKey(Account, related_name='transactions_from', on_delete=models.CASCADE, blank=True, null=True)
     destination_account = models.ForeignKey(Account, related_name='transactions_to', on_delete=models.CASCADE, blank=True, null=True)
-    
-    tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-    fee = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 
     objects = TransactionQuerySet.as_manager()
 
     def __str__(self):
         return f'{self.type.capitalize()} - {self.amount} on {self.date}'
-
-    def save(self, *args, **kwargs):
-        """
-        Override the save method to handle balance adjustments automatically when a transaction is created.
-        """
-        super().save(*args, **kwargs)
-        self.adjust_account_balances()
-
-        if self.fee is not None and self.fee > 0:
-            self.create_fee_transaction()
-
-    def adjust_account_balances(self):
-        """
-        Adjusts the balances of the involved accounts based on the transaction type.
-        For incoming transactions, apply tax and fee handling.
-        """
-        # Tax handling for incoming transactions
-        if self.type == 'income':
-            tax_amount = (self.tax_percentage or Decimal(0)) * self.amount / Decimal(100)
-
-            self.destination_account.balance += self.amount
-            self.destination_account.save()
-            
-            virtual_tax_account = Account.objects.get(account_type='virtual_tax')
-            virtual_tax_account.balance += tax_amount
-            virtual_tax_account.save()
-
-        elif self.type == 'internal':
-            self.origin_account.calculate_balance()
-            self.destination_account.calculate_balance()
-
-        elif self.type == 'expense':
-            self.origin_account.calculate_balance()
-
-    def create_fee_transaction(self):
-        """
-        Creates a separate expense transaction to record the fee as an expense.
-        """
-        fee_transaction = Transaction.objects.create(
-            type='expense',
-            amount=self.fee,
-            origin_account=self.destination_account,
-            description=f"Fee for the '{self.description}' transaction.",
-            date=self.date,
-            user=self.user,
-        )
-
-        Expense.objects.create(
-            category='fees',
-            amount=self.fee,
-            account=self.destination_account,
-            transaction=fee_transaction,
-            date=self.date,
-            source='personal',
-            fixed_or_variable='fixed',
-        )
-
-        fee_transaction.save()
 
     class Meta:
         ordering = ['-date']
@@ -130,7 +55,7 @@ class Income(models.Model):
         ('interest', 'Interest'),
         ('parents', 'Parents'),
         ('birthday', 'Birthday'),
-        ('iva_reimbursement', 'IVA_Reimbursement'),
+        ('iva_reimbursement', 'IVA Reimbursement'),
     ]
 
     amount = models.DecimalField(max_digits=10, decimal_places=2)
