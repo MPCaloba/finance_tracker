@@ -121,21 +121,23 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         form.instance.user = self.request.user
+
+        # Get the new transaction from the form without saving to the DB
         transaction = form.save(commit=False)
 
-        # Track original values before updating
+        # Get the original transaction values before updating
         original_transaction = Transaction.objects.get(pk=transaction.pk)
         original_amount = original_transaction.amount
         original_origin_account = original_transaction.origin_account
         original_destination_account = original_transaction.destination_account
 
-        # Adjust balances based on the original values
+        # Adjust balances based on the type of transaction and the original values
         if transaction.type == 'income':
             # Deduct the original amount from the original destination account
             original_destination_account.balance -= original_amount
             original_destination_account.save()
 
-            # Update the transaction and the Income record
+            # Update the Income record associated with the transaction
             income, created = Income.objects.update_or_create(
                 transaction=transaction,
                 defaults={
@@ -145,11 +147,12 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
                     'account': transaction.destination_account,
                 }
             )
-
         elif transaction.type == 'expense':
+            # Add the original amount to the original origin account
             original_origin_account.balance += original_amount
             original_origin_account.save()
 
+            # Update the Expense record associated with the transaction
             expense, created = Expense.objects.update_or_create(
                 transaction=transaction,
                 defaults={
@@ -161,6 +164,21 @@ class TransactionsUpdateView(LoginRequiredMixin, UpdateView):
                     'source': form.cleaned_data.get('expense_source'),
                 }
             )
+        elif transaction.type == 'internal':
+            # Restore original amounts to both origin and destination accounts
+            original_origin_account.balance += original_amount
+            original_origin_account.save()
+            original_destination_account.balance -= original_amount
+            original_destination_account.save()
+        elif transaction.type == 'tax':
+            # Income-related tax transaction
+            if original_destination_account:
+                original_destination_account.balance -= original_amount
+                original_destination_account.save()
+            # Expense-related tax transaction
+            elif original_origin_account:
+                original_origin_account.balance += original_amount
+                original_origin_account.save()
 
         # Save the updated transaction
         transaction.save()
