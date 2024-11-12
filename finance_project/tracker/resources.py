@@ -2,7 +2,7 @@ from import_export import resources, fields
 from tracker.models import Transaction, Account
 from import_export.widgets import DateWidget, ForeignKeyWidget
 
-class TransactionResource(resources.ModelResource):
+class TransactionExportResource(resources.ModelResource):
     date = fields.Field(
         column_name='Date',
         attribute='date',
@@ -29,9 +29,52 @@ class TransactionResource(resources.ModelResource):
         widget=ForeignKeyWidget(Account, 'name')
     )
 
+    def dehydrate_type(self, transaction):
+        return transaction.get_type_display()
+
+    def dehydrate_amount(self, transaction):
+        return f"€ {transaction.amount:,.2f}"
+
+    def dehydrate_income_category(self, transaction):
+        if transaction.type == 'income' and transaction.income_transaction:
+            return transaction.income_transaction.category.capitalize()
+        return ''
+
+    def dehydrate_expense_category(self, transaction):
+        if transaction.type == 'expense' and transaction.expense_transaction:
+            return transaction.expense_transaction.category.capitalize()
+        return ''
+
+    def dehydrate_source(self, transaction):
+        if transaction.type == 'expense' and transaction.expense_transaction:
+            return transaction.expense_transaction.source.capitalize()
+        return ''
+
+    def dehydrate_fixed_or_variable(self, transaction):
+        if transaction.type == 'expense' and transaction.expense_transaction:
+            return transaction.expense_transaction.fixed_or_variable.capitalize()
+        return ''
+
     def after_init_instance(self, instance, new, row, **kwargs):
         instance.user = kwargs.get('user')
 
+    class Meta:
+        model = Transaction
+        fields = (
+            'date',
+            'type',
+            'description',
+            'amount',
+            'income_category',
+            'expense_category',
+            'source',
+            'fixed_or_variable',
+            'origin_account',
+            'destination_account',
+        )
+
+
+class TransactionImportResource(resources.ModelResource):
     class Meta:
         model = Transaction
         fields = (
@@ -58,29 +101,3 @@ class TransactionResource(resources.ModelResource):
             'origin_account',
             'destination_account',             
         )
-
-    def dehydrate_type(self, transaction):
-        return transaction.get_type_display()
-
-    def dehydrate_amount(self, transaction):
-        return f"€ {transaction.amount:,.2f}"
-
-    def dehydrate_income_category(self, transaction):
-        if transaction.type == 'income' and transaction.income_transaction:
-            return transaction.income_transaction.category.capitalize()
-        return ''
-
-    def dehydrate_expense_category(self, transaction):
-        if transaction.type == 'expense' and transaction.expense_transaction:
-            return transaction.expense_transaction.category.capitalize()
-        return ''
-
-    def dehydrate_source(self, transaction):
-        if transaction.type == 'expense' and transaction.expense_transaction:
-            return transaction.expense_transaction.source.capitalize()
-        return ''
-
-    def dehydrate_fixed_or_variable(self, transaction):
-        if transaction.type == 'expense' and transaction.expense_transaction:
-            return transaction.expense_transaction.fixed_or_variable.capitalize()
-        return ''

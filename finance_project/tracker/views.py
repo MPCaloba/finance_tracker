@@ -6,9 +6,10 @@ from django.http import HttpResponseNotAllowed, HttpResponse
 from tracker.models import Transaction, Income, Expense
 from tracker.filters import TransactionFilter
 from tracker.forms import TransactionForm
-from tracker.resources import TransactionResource
+from tracker.resources import TransactionExportResource, TransactionImportResource
 from tracker.tracker_helpers import adjust_account_balances
 
+from tablib import Dataset
 
 def index(request):
     return render(request, 'tracker/index.html')
@@ -229,16 +230,12 @@ class TransactionsExportView(LoginRequiredMixin, View):
         if request.htmx:
             return HttpResponse(headers={'HX-Redirect': request.get_full_path()})
 
-        print(request.GET)
-
         transaction_filter = TransactionFilter(
             request.GET,
             queryset=Transaction.objects.filter(user=request.user).select_related('expense_transaction', 'income_transaction')
         )
-        
-        print(transaction_filter.qs.query)
 
-        data = TransactionResource().export(transaction_filter.qs)
+        data = TransactionExportResource().export(transaction_filter.qs)
         response = HttpResponse(data.csv, content_type="text/csv")
         response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
         return response
@@ -246,5 +243,31 @@ class TransactionsExportView(LoginRequiredMixin, View):
 
 class TransactionsImportView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        if request.htmx:
-            return HttpResponse(headers={'HX-Redirect': request.get_full_path()})
+        return render(request, 'tracker/partials/import-transaction.html')
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        resource = TransactionImportResource()
+        dataset = Dataset()
+
+        # Load the file into the dataset
+        dataset.load(file.read().decode(), format='csv')
+        
+        # Dry run the import to first check for errors
+        result = resource.import_data(dataset, user=request.user, dry_run=True)
+
+        # Log any errors from the dry run
+        for row in result:
+            for error in row.errors:
+                print(error)
+
+        if not result.has_errors():
+            # If no errors, perform the actual import
+            resource.import_data(dataset, user=request.user, dry_run=False)
+            context = {'message': f'{len(dataset)} transactions were uploaded successfully'}
+        else:
+            # If errors, show an error message
+            context = {'message': 'Sorry, an error occurred.'}
+
+        # Return the success message after the transaction import
+        return render(request, 'tracker/partials/transaction-success.html', context)
