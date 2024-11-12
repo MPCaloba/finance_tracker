@@ -24,6 +24,14 @@
         <!-- CSS -->
         <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
 
+        <!-- CSRF Token for AJAX Requests -->
+        <script>
+            const csrfToken = "{{ csrf_token }}";
+            document.addEventListener("htmx:configRequest", (event) => {
+                event.detail.headers["X-CSRFToken"] = csrfToken;
+            });
+        </script>
+
         {% block extra_head %}
 
         {% endblock %}
