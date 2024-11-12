@@ -32,20 +32,30 @@
         </div>
 
         <div class="flex justify-between items-center mt-4 mb-6">
-            
             <h1 class="mt-8 mb-4 prose prose-2xl text-white">
                 Transactions
             </h1>
-            
-            <a hx-get="{% url 'create-transaction' %}"
-                hx-push-url="true"
-                hx-target="#transaction-block"
-                class="cursor-pointer">
-
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="green" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
+            <div class="flex items-center">
+                <a hx-get="{% url 'create-transaction' %}"
+                    hx-push-url="true"
+                    hx-target="#transaction-block"
+                    class="cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="green" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                 </a>
+                <a class="cursor-pointer" hx-get="{% url 'export' %}" hx-include="#filterform">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 ml-3 cursor-pointer">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>                      
+                </a>
+
+                <a class="cursor-pointer" hx-get="{% url 'import' %}" hx-push-url="true" hx-target="#transaction-block">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 ml-3 cursor-pointer">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                    </svg>
+                </a>
+            </div>
         </div>
 
         {% if filter.qs %}
@@ -118,7 +128,8 @@
     <div class="col-span-1">
         <form hx-get="{% url 'transactions-list' %}"
             hx-target="#transaction-container"
-            hx-swap="outerHTML">
+            hx-swap="outerHTML"
+            id="filterform">
             
             <div class="mb-2 form-control">
                 {{ filter.form.transaction_type|add_label_class:"label text-white" }}

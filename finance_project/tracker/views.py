@@ -1,11 +1,12 @@
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
-from django.http import HttpResponseNotAllowed
+from django.http import HttpResponseNotAllowed, HttpResponse
 
-from tracker.models import Account, Transaction, Income, Expense
+from tracker.models import Transaction, Income, Expense
 from tracker.filters import TransactionFilter
 from tracker.forms import TransactionForm
+from tracker.resources import TransactionResource
 from tracker.tracker_helpers import adjust_account_balances
 
 
@@ -221,3 +222,29 @@ class TransactionsDeleteView(LoginRequiredMixin, DeleteView):
             'message': f"Transaction of {amount} on {date} was deleted successfully!"
         }
         return render(request, self.template_name, context)
+
+
+class TransactionsExportView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        if request.htmx:
+            return HttpResponse(headers={'HX-Redirect': request.get_full_path()})
+
+        print(request.GET)
+
+        transaction_filter = TransactionFilter(
+            request.GET,
+            queryset=Transaction.objects.filter(user=request.user).select_related('expense_transaction', 'income_transaction')
+        )
+        
+        print(transaction_filter.qs.query)
+
+        data = TransactionResource().export(transaction_filter.qs)
+        response = HttpResponse(data.csv, content_type="text/csv")
+        response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
+        return response
+
+
+class TransactionsImportView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        if request.htmx:
+            return HttpResponse(headers={'HX-Redirect': request.get_full_path()})

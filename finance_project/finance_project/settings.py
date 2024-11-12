@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'django_filters',
     'django_htmx',
+    'import_export',
     
     # project apps
     "tracker",
