@@ -247,27 +247,41 @@ class TransactionsImportView(LoginRequiredMixin, View):
 
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
+        if not file:
+            return render(request, 'tracker/partials/transaction-success.html', {'message': 'No file uploaded.'})
+
         resource = TransactionImportResource()
         dataset = Dataset()
 
         # Load the file into the dataset
-        dataset.load(file.read().decode(), format='csv')
+        try:
+            dataset.load(file.read().decode(), format='csv', headers=True)
+        except Exception as e:
+            return render(request, 'tracker/partials/transaction-success.html', {'message': f"Error loading dataset: {e}"})
         
         # Dry run the import to first check for errors
-        result = resource.import_data(dataset, user=request.user, dry_run=True)
+        try:
+            result = resource.import_data(dataset, user=request.user, dry_run=True, raise_errors=True)
+        except Exception as e:
+            return render(request, 'tracker/partials/transaction-success.html', {'message': f"Error during dry run: {e}"})
 
         # Log any errors from the dry run
-        for row in result:
-            for error in row.errors:
-                print(error)
+        if result.has_errors():
+            errors = []
+            for row in result.row_errors():
+                row_number, row_errors = row
+                row_error_messages = [f"Row {row_number}: {error}" for error in row_errors]
+                errors.extend(row_error_messages)
+            return render(request, 'tracker/partials/transaction-success.html', {
+                'message': 'Errors found during dry run import.',
+                'errors': errors,
+            })
 
-        if not result.has_errors():
-            # If no errors, perform the actual import
+        # Perform the actual import
+        try:
             resource.import_data(dataset, user=request.user, dry_run=False)
-            context = {'message': f'{len(dataset)} transactions were uploaded successfully'}
-        else:
-            # If errors, show an error message
-            context = {'message': 'Sorry, an error occurred.'}
+        except Exception as e:
+            return render(request, 'tracker/partials/transaction-success.html', {'message': f"Error during actual import: {e}"})
 
         # Return the success message after the transaction import
-        return render(request, 'tracker/partials/transaction-success.html', context)
+        return render(request, 'tracker/partials/transaction-success.html', {'message': f'{len(dataset)} transactions uploaded successfully!'})
