@@ -1,13 +1,15 @@
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
-from django.http import HttpResponseNotAllowed
+from django.http import HttpResponseNotAllowed, HttpResponse
 
-from tracker.models import Account, Transaction, Income, Expense
+from tracker.models import Transaction, Income, Expense
 from tracker.filters import TransactionFilter
 from tracker.forms import TransactionForm
+from tracker.resources import TransactionExportResource, TransactionImportResource
 from tracker.tracker_helpers import adjust_account_balances
 
+from tablib import Dataset
 
 def index(request):
     return render(request, 'tracker/index.html')
@@ -221,3 +223,65 @@ class TransactionsDeleteView(LoginRequiredMixin, DeleteView):
             'message': f"Transaction of {amount} on {date} was deleted successfully!"
         }
         return render(request, self.template_name, context)
+
+
+class TransactionsExportView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        if request.htmx:
+            return HttpResponse(headers={'HX-Redirect': request.get_full_path()})
+
+        transaction_filter = TransactionFilter(
+            request.GET,
+            queryset=Transaction.objects.filter(user=request.user).select_related('expense_transaction', 'income_transaction')
+        )
+
+        data = TransactionExportResource().export(transaction_filter.qs)
+        response = HttpResponse(data.csv, content_type="text/csv")
+        response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
+        return response
+
+
+class TransactionsImportView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        return render(request, 'tracker/partials/import-transaction.html')
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        if not file:
+            return render(request, 'tracker/partials/transaction-success.html', {'message': 'No file uploaded.'})
+
+        resource = TransactionImportResource()
+        dataset = Dataset()
+
+        # Load the file into the dataset
+        try:
+            dataset.load(file.read().decode(), format='csv', headers=True)
+        except Exception as e:
+            return render(request, 'tracker/partials/transaction-success.html', {'message': f"Error loading dataset: {e}"})
+        
+        # Dry run the import to first check for errors
+        try:
+            result = resource.import_data(dataset, user=request.user, dry_run=True, raise_errors=True)
+        except Exception as e:
+            return render(request, 'tracker/partials/transaction-success.html', {'message': f"Error during dry run: {e}"})
+
+        # Log any errors from the dry run
+        if result.has_errors():
+            errors = []
+            for row in result.row_errors():
+                row_number, row_errors = row
+                row_error_messages = [f"Row {row_number}: {error}" for error in row_errors]
+                errors.extend(row_error_messages)
+            return render(request, 'tracker/partials/transaction-success.html', {
+                'message': 'Errors found during dry run import.',
+                'errors': errors,
+            })
+
+        # Perform the actual import
+        try:
+            resource.import_data(dataset, user=request.user, dry_run=False)
+        except Exception as e:
+            return render(request, 'tracker/partials/transaction-success.html', {'message': f"Error during actual import: {e}"})
+
+        # Return the success message after the transaction import
+        return render(request, 'tracker/partials/transaction-success.html', {'message': f'{len(dataset)} transactions uploaded successfully!'})
