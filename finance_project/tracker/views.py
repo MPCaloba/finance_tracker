@@ -2,6 +2,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView, V
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.http import HttpResponseNotAllowed, HttpResponse
+from django.core.paginator import Paginator
 
 from tracker.models import Transaction, Income, Expense
 from tracker.filters import TransactionFilter
@@ -11,14 +12,18 @@ from tracker.tracker_helpers import adjust_account_balances
 
 from tablib import Dataset
 
+PAGE_TRANSACTIONS = 20
+
 def index(request):
     return render(request, 'tracker/index.html')
 
 
 class TransactionsListView(LoginRequiredMixin, ListView):
     model = Transaction
+    context_object_name = 'transactions'
 
     def get_queryset(self):
+        """Fetches and filters the queryset based on user and optional filtering."""
         queryset = Transaction.objects.filter(user=self.request.user).select_related('expense_transaction', 'income_transaction')
         
         if self.request.GET:
@@ -26,20 +31,40 @@ class TransactionsListView(LoginRequiredMixin, ListView):
             return transaction_filter.qs
         return queryset
 
-    def get(self, request, *args, **kwargs):
-        transaction_filter = TransactionFilter(
-            request.GET,
-            queryset=self.get_queryset()
-        )
-        total_income = transaction_filter.qs.get_total_income()
-        total_expenses = transaction_filter.qs.get_total_expenses()
+    def get_context_data(self, **kwargs):
+        """Adds filtered transactions, pagination, and income/expense totals to the context."""
+        self.object_list = self.get_queryset()
+        
+        # Call the parent's method to initialize context
+        context = super().get_context_data(**kwargs)
+
+        # Apply filtering
+        transaction_filter = TransactionFilter(self.request.GET, queryset=self.get_queryset())
+        filtered_transactions = transaction_filter.qs
+
+        # Pagination logic
+        paginator = Paginator(filtered_transactions, PAGE_TRANSACTIONS)
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        # Add income and expense totals
+        total_income = filtered_transactions.get_total_income()
+        total_expenses = filtered_transactions.get_total_expenses()
+
+        # Add to context
         context = {
             'filter': transaction_filter,
+            'page_obj': page_obj,
+            'transactions': page_obj.object_list,
             'total_income': total_income,
             'total_expenses': total_expenses,
             'net_income': total_income - total_expenses
         }
+        return context
 
+    def get(self, request, *args, **kwargs):
+        """Handles both regular and HTMX requests to render partials or full templates."""
+        context = self.get_context_data()
         if request.htmx:
             return render(request, 'tracker/partials/transactions-container.html', context)
 

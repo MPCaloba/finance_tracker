@@ -2,11 +2,11 @@
 {% load humanize %}
 
 <!-- Define Grid container div -->
-<div class="flex flex-col-reverse md:grid md:grid-cols-4 md:gap-4"
+<div class="flex flex-col-reverse md:grid md:grid-cols-[3fr_1fr] md:gap-20"
     id="transaction-container">
 
     <!-- 3/4 cols for the table of transactions -->
-    <div class="col-span-3">
+    <div class="col-span-3 md:col-auto">
         <div class="my-4">
             <h1 class="mt-4 mb-4 prose prose-2xl text-white">
                 Totals
@@ -44,13 +44,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                 </a>
-                <a class="cursor-pointer" hx-get="{% url 'export' %}" hx-include="#filterform">
+                <a hx-get="{% url 'export' %}" hx-include="#filterform" class="cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 ml-3 cursor-pointer">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>                      
                 </a>
 
-                <a class="cursor-pointer" hx-get="{% url 'import' %}" hx-push-url="true" hx-target="#transaction-block">
+                <a hx-get="{% url 'import' %}" hx-push-url="true" hx-target="#transaction-block" class="cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 ml-3 cursor-pointer">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
                     </svg>
@@ -73,7 +73,7 @@
             </thead>
 
             <tbody>
-                {% for transaction in filter.qs %}
+                {% for transaction in page_obj %}
                     <tr>
                         <td>{{ transaction.date|date:"M. d, Y" }}</td>
                         <td>{{ transaction.description }}</td>
@@ -115,6 +115,9 @@
             </tbody>
         </table>
 
+        <!-- Include pagination -->
+        {% include 'tracker/partials/pagination.html' %}
+
         {% else %}
 
         <p class="text-2xl text-white">
@@ -125,7 +128,7 @@
     </div>
 
     <!-- 1/4 cols for the filter form -->
-    <div class="col-span-1">
+    <div class="col-span-1 md:col-auto">
         <form hx-get="{% url 'transactions-list' %}"
             hx-target="#transaction-container"
             hx-swap="outerHTML"
@@ -148,15 +151,15 @@
 
             <div class="mb-4 form-control">
                 {{ filter.form.expense_category|add_label_class:"label text-white" }}
-                {% render_field filter.form.expense_category class="text-green-500 border-gray-300 rounded focus:ring-green-500" %}
+                {% render_field filter.form.expense_category class="text-green-600 border-gray-300 rounded focus:ring-green-500" %}
             </div>
 
             <div class="mb-4 form-control">
                 {{ filter.form.income_category|add_label_class:"label text-white" }}
-                {% render_field filter.form.income_category class="text-green-500 border-gray-300 rounded focus:ring-green-500" %}
+                {% render_field filter.form.income_category class="text-green-600 border-gray-300 rounded focus:ring-green-500" %}
             </div>
 
-            <button class="btn btn-success">
+            <button class="btn btn-active">
                 Filter
             </button>        
         </form>

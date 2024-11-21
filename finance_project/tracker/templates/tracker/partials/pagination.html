@@ -1,0 +1,20 @@
+<div class="pagination flex items-center justify-center mt-8 mb-8 space-x-4">
+    <!-- Previous button -->
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-active">
+            Previous
+        </a>
+    {% endif %}
+
+    <!-- Current page info -->
+    <span class="text-sm">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+
+    <!-- Next button -->
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn btn-active">
+            Next
+        </a>
+    {% endif %}
+</div>
