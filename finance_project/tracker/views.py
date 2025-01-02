@@ -3,6 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.http import HttpResponseNotAllowed, HttpResponse
 from django.core.paginator import Paginator
+from django.db.models import Sum
 
 from tracker.models import Transaction, Income, Expense
 from tracker.filters import TransactionFilter
@@ -310,3 +311,30 @@ class TransactionsImportView(LoginRequiredMixin, View):
 
         # Return the success message after the transaction import
         return render(request, 'tracker/partials/transaction-success.html', {'message': f'{len(dataset)} transactions uploaded successfully!'})
+
+
+class TotalsView(LoginRequiredMixin, ListView):
+    model = Transaction
+    context_object_name = 'totals'
+    template_name = "tracker/totals.html"
+
+    def get_queryset(self):
+        """Fetches the queryset."""
+        queryset = Transaction.objects.filter(user=self.request.user)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        self.object_list = self.get_queryset()
+        context = super().get_context_data(**kwargs)
+        
+        # Calculate totals
+        total_income = Transaction.objects.filter(type='income').aggregate(Sum('amount'))['amount__sum'] or 0
+        total_expenses = Transaction.objects.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
+        
+        context = {
+            'total_income': total_income,
+            'total_expenses': total_expenses,
+            'net_income': total_income - total_expenses
+        }
+        
+        return context
