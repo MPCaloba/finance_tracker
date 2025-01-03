@@ -9,23 +9,22 @@
     <div class="col-span-3 md:col-auto">
         <div class="my-4">
             <h1 class="mt-4 mb-4 prose prose-2xl text-white">
-                Totals
+                Account Totals
             </h1>
 
             <table class="table">
-                <thead class="text-xs text-white uppercase">
-                    <tr>
-                        <th>Total Income</th>
-                        <th>Total Expenses</th>
-                        <th>Net Income</th>
+                <thead>
+                    <thead class="text-xs text-white uppercase">
+                        {% for account_name in account_balances.keys %}
+                            <th class="text-center">{{ account_name }}</th>
+                        {% endfor %}
                     </tr>
                 </thead>
-
                 <tbody>
                     <tr>
-                        <td>{{ total_income|floatformat:2|intcomma }}€</td>
-                        <td>{{ total_expenses|floatformat:2|intcomma }}€</td>
-                        <td>{{ net_income|floatformat:2|intcomma }}€</td>
+                        {% for balance in account_balances.values %}
+                            <td class="text-center">{{ balance|floatformat:2|intcomma }}€</td>
+                        {% endfor %}
                     </tr>
                 </tbody>
             </table>
