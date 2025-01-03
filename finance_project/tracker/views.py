@@ -3,8 +3,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.http import HttpResponseNotAllowed, HttpResponse
 from django.core.paginator import Paginator
+from django.db.models import Sum
 
-from tracker.models import Transaction, Income, Expense
+from tracker.models import Transaction, Income, Expense, Account
 from tracker.filters import TransactionFilter
 from tracker.forms import TransactionForm
 from tracker.resources import TransactionExportResource, TransactionImportResource
@@ -21,6 +22,9 @@ def index(request):
 class TransactionsListView(LoginRequiredMixin, ListView):
     model = Transaction
     context_object_name = 'transactions'
+
+    # Specify accounts to display
+    ACCOUNTS_TO_DISPLAY = ['BPI', 'Trade Republic', 'ActivoBank']
 
     def get_queryset(self):
         """Fetches and filters the queryset based on user and optional filtering."""
@@ -47,18 +51,19 @@ class TransactionsListView(LoginRequiredMixin, ListView):
         page_number = self.request.GET.get('page')
         page_obj = paginator.get_page(page_number)
 
-        # Add income and expense totals
-        total_income = filtered_transactions.get_total_income()
-        total_expenses = filtered_transactions.get_total_expenses()
+        # Get balances for each account
+        accounts = Account.objects.filter(name__in=self.ACCOUNTS_TO_DISPLAY, user=self.request.user)
+        account_balances = {
+            account.name: account.balance
+            for account in accounts
+        }
 
         # Add to context
         context = {
             'filter': transaction_filter,
             'page_obj': page_obj,
             'transactions': page_obj.object_list,
-            'total_income': total_income,
-            'total_expenses': total_expenses,
-            'net_income': total_income - total_expenses
+            'account_balances': account_balances,
         }
         return context
 
@@ -310,3 +315,30 @@ class TransactionsImportView(LoginRequiredMixin, View):
 
         # Return the success message after the transaction import
         return render(request, 'tracker/partials/transaction-success.html', {'message': f'{len(dataset)} transactions uploaded successfully!'})
+
+
+class TotalsView(LoginRequiredMixin, ListView):
+    model = Transaction
+    context_object_name = 'totals'
+    template_name = "tracker/totals.html"
+
+    def get_queryset(self):
+        """Fetches the queryset."""
+        queryset = Transaction.objects.filter(user=self.request.user)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        self.object_list = self.get_queryset()
+        context = super().get_context_data(**kwargs)
+
+        # Calculate totals
+        total_income = Transaction.objects.filter(type='income').aggregate(Sum('amount'))['amount__sum'] or 0
+        total_expenses = Transaction.objects.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
+        
+        context = {
+            'total_income': total_income,
+            'total_expenses': total_expenses,
+            'net_income': total_income - total_expenses
+        }
+        
+        return context
