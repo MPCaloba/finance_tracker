@@ -141,12 +141,14 @@ if os.getenv('DJANGO_ENV') == 'production':
     # Production settings
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/static/'
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
 else:
     # Development settings
     STATIC_URL = "static/"
     STATICFILES_DIRS = [
-        BASE_DIR / 'static'
+        BASE_DIR / 'static',
     ]
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/'
