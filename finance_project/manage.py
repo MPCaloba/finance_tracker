@@ -2,11 +2,29 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+import subprocess
+import warnings
+
+
+def get_git_branch():
+    try:
+        branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+        return branch.decode("utf-8").strip()
+    except Exception as e:
+        warnings.warn(
+            f"Could not determine the current Git branch. Exception: {e}. "
+            "Falling back to 'staging' settings."
+        )
+        return "staging"
 
 
 def main():
-    """Run administrative tasks."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finance_project.settings")
+    branch = get_git_branch()
+    if branch == "master":
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finance_project.settings.production")
+    else:
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finance_project.settings.staging")
+
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
