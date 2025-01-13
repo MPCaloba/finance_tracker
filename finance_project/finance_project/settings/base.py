@@ -12,7 +12,7 @@ environ.Env.read_env(BASE_DIR / '.env')  # reads .env file if exists
 SECRET_KEY = env('SECRET_KEY')
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
