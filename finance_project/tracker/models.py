@@ -91,7 +91,6 @@ class Income(models.Model):
 class Expense(models.Model):
     EXPENSE_CATEGORIES = [
         ('accessories', 'Accessories'),
-        ('books', 'Books'),
         ('car', 'Car'),
         ('cash', 'Cash'),
         ('clothing', 'Clothing'),
@@ -104,7 +103,6 @@ class Expense(models.Model):
         ('groceries', 'Groceries'),
         ('gym', 'Gym'),
         ('housing', 'Housing'),
-        ('insurance', 'Insurance'),
         ('medical appointments', 'Medical Appointments'),
         ('miscellaneous', 'Miscellaneous'),
         ('personal care', 'Personal Care'),
@@ -113,7 +111,6 @@ class Expense(models.Model):
         ('petrol', 'Petrol'),
         ('pharmacy', 'Pharmacy'),
         ('phone', 'Phone'),
-        ('renovation', 'Renovation'),
         ('sports', 'Sports'),
         ('supplements', 'Supplements'),
         ('tattoos', 'Tattoos'),
@@ -121,6 +118,7 @@ class Expense(models.Model):
         ('transportation', 'Transportation'),
         ('utilities', 'Utilities'),
         ('vacation', 'Vacation'),
+        ('wedding', 'Wedding'),
         ('workspace', 'Workspace'),
     ]
 
